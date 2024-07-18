@@ -13,19 +13,19 @@ import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.security.web.firewall.RequestRejectedException;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
 import org.springframework.stereotype.Component;
-import vtb.courses.spring_sec.lesson1.entity.WhiteListAccessException;
-import vtb.courses.spring_sec.lesson1.entity.WhiteListMatcher;
 
 import java.io.IOException;
 
-//class WhiteListAccess extends RequestRejectedException {
-//    public WhiteListAccess(String message) {
-//        super(message);
-//    }
-//}
-
+/**
+ * SecuritySettings - осуществляет настройку Spring Security
+ */
 @Component
 public class SecuritySettings {
+    /**
+     * WhiteListFilter - кастомный фильтр осуществляющий логику доступа по "Белому списку"
+     * Не вынесен в отдельный файл, т.к. иначе Spring Security автоматически его цепляет и
+     * начинает применять к каждой странице сайта
+     */
     public class WhiteListFilter implements Filter {
         @Override
         public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
@@ -43,8 +43,9 @@ public class SecuritySettings {
         }
     }
 
-//    private final WhiteListFilter whiteListFilter;
-
+    /**
+     * handleException - общий обработчик ошибок возникающих в фильтрах
+     */
     private static void  handleException(HttpServletRequest request, HttpServletResponse response, RequestRejectedException requestRejectedException) throws IOException, ServletException {
         if (requestRejectedException instanceof WhiteListAccessException) {
             response.sendRedirect("AccessDenied.html");
@@ -62,7 +63,7 @@ public class SecuritySettings {
 //            Matcher requestUrlMatcher = greetingPage.matcher(request.getRequestURL());
 //            if (requestUrlMatcher.find()) {
 //                if (!urlMatcher.checkUrl(request.getHeader("referer"))) {
-//                    throw new WhiteListAccess("");
+//                    throw new WhiteListAccessException("");
 //                } else {
 //                    filterChain.doFilter(servletRequest, servletResponse);
 //                }
@@ -71,6 +72,9 @@ public class SecuritySettings {
 //        }
 //    }
 
+    /**
+     * initSecurity - настройка Spring Security HTTP Firewall
+     */
     @Bean
     public WebSecurityCustomizer initSecurity() {
 
@@ -81,16 +85,25 @@ public class SecuritySettings {
                 ;
     }
 
+    /**
+     * filterChainWhiteList - фильтр для организации логики доступа по "Белому списку"
+     */
     @Bean @Order(1)
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
+    SecurityFilterChain filterChainWhiteList(HttpSecurity http) throws Exception{
         return http
                 .securityMatcher("/greeting2/**")
                 .addFilterAfter(new WhiteListFilter(), LogoutFilter.class)
                 .build();
     }
 
+    /**
+     * filterChainAuthenticatedAccessOnly - фильтр для разрешения доступа к страницам сайта
+     * только аутенифицированным пользователям
+     * +
+     * ограничение на кол-во одновременных сессий одного пользователя
+     */
     @Bean @Order(2)
-    SecurityFilterChain filterChain2(HttpSecurity http) throws Exception{
+    SecurityFilterChain filterChainAuthenticatedAccessOnly(HttpSecurity http) throws Exception{
         return http
                 .sessionManagement(httpSecuritySessionManagementConfigurer -> httpSecuritySessionManagementConfigurer.maximumSessions(1))
                 .formLogin(c -> c.defaultSuccessUrl("/", true))
@@ -98,7 +111,4 @@ public class SecuritySettings {
                 .build();
     }
 
-//    public SecuritySettings() {
-//        whiteListFilter = new WhiteListFilter();
-//    }
 }
